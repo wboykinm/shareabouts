@@ -2,28 +2,28 @@
 # See https://github.com/svenfuchs/rails-i18n/tree/master/rails%2Flocale for starting points.
 
 en:
-  app_name: Shareabouts
+  app_name: OpenLunch!
   map_controls:
-    locate_feature: 'Add a point!'
-    finalize_feature: 'Confirm Location'
+    locate_feature: 'Add your lunch spot'
+    finalize_feature: 'Confirm location'
   auth:
     fb_signin: 'Sign in with Facebook'
   feature:
     notice:
-      point_added: 'Thank you! Your point was added to the map. Please, share it with your friends.'
-      invalid: 'There are some errors with your point.'
+      point_added: 'Thank you! Your spot was added to the map.'
+      invalid: 'There are some errors with your spot.'
     form:
-      header: 'Tell us more...'
-      title_label: Title
-      description_label: Description...
+      header: "What's so great about this spot?"
+      title_label: Spot Name
+      description_label: This place is awesome because...
       submitter_name_label: 'Your Name'
-      submit: 'Submit Point'
+      submit: 'Add it!'
     submitted_by: 'Added by %{author} on %{date_s}'
     comment: 
       label: comment
-      action: Reply
+      action: Discuss
     voter_description: supporter
-    vote_action: 'Support This!'
+    vote_action: 'Mmmmm!'
     sharing:
       email:
         subject: 'I suggested a %{thing}'
@@ -38,13 +38,13 @@ en:
     point:
       action: added
       indefinite_article: a
-      by_name: "%{name}'s point"
+      by_name: "%{name}'s lunch spot"
       in_region: "in %{region}"
   # Model names and model attribute names
   activerecord:
     models:
-      feature_point: point
-      user: someone
+      feature_point: lunch spot
+      user: OpenPlanner
     attributes:
       feature_point:
         the_geom: location
