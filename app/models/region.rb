@@ -19,14 +19,6 @@ class Region < ActiveRecord::Base
     "#{kind} - #{name}"
   end
   
-  def kind
-    shapefile.kind
-  end
-  
-  def name
-    metadata[shapefile.name_field]
-  end
-  
   def default?
     shapefile.default?
   end

@@ -3,7 +3,8 @@
 # and then the shapefile is parsed for Regions. Shapefile parsing and region 
 # creation happens in lib/jobs/shapefile_job.rb. Shapefiles that contain a .prj
 # file are reprojected via ogr2ogr.
-
+#
+# Deprecated db fields: kind, name_field
 class Shapefile < ActiveRecord::Base
   has_many :regions, :inverse_of => :shapefile, :dependent => :destroy
   
@@ -18,8 +19,8 @@ class Shapefile < ActiveRecord::Base
   
   before_save  :set_default_update_flag
   after_create :enqueue_importer
-  after_save   :update_other_region_defauls
-    
+  after_save   :update_other_region_defaults
+  
   include Workflow
   workflow do
     state :unprocessed do
@@ -55,7 +56,7 @@ class Shapefile < ActiveRecord::Base
     @update_other_regions_default = true if changes[:default] && changes[:default].last
   end
   
-  def update_other_region_defauls
+  def update_other_region_defaults
     Shapefile.update_all( "\"default\" = false", "id <> #{id} AND \"default\" = true" ) if @update_other_regions_default
   end
 end
