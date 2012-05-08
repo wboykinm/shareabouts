@@ -1,14 +1,10 @@
 class ApplicationController < ActionController::Base
+  include ValidBrowser
+  
   protect_from_forgery
+  before_filter :restrict_browser
   before_filter :set_locale
   before_filter :set_admin_current_admin
-  
-  def geo_json_for(things)
-    {
-      :type => "FeatureCollection",
-      :features => things.map(&:as_geo_json)
-    }
-  end
   
   def set_locale
     I18n.locale = env['rack.locale'] || I18n.default_locale
@@ -30,6 +26,21 @@ class ApplicationController < ActionController::Base
     stored_location_for(resource) || return_to || root_path  
   end
   
+  def find_or_create_profile
+    @profile = current_profile || set_profile_cookie(Profile.create_by_request_fingerprint(request))
+  end
+  
+  def current_profile
+    @current_profile ||= if current_user.present?
+      current_user.profile
+    elsif cookies[:profile].inspect != "nil" # requires that we have set the profile cookie
+      require 'profile'
+      Marshal.load(cookies[:profile])
+    else
+      set_profile_cookie Profile.find_by_request_fingerprint(request)
+    end
+  end
+  
   def current_ability
     # we only distinguish between admin and not admin. guests & users have equal abilities.
     @current_ability ||= Ability.new(current_admin) 
@@ -45,4 +56,49 @@ class ApplicationController < ActionController::Base
     Admin.current_admin = current_admin
   end
   
+  def supported?(supportable)
+    return false if cookies[:supportable].inspect == "nil"
+    
+    supported   = Marshal.load(cookies[:supportable])
+    key         = supportable.class.to_s.to_sym
+    
+    supported.key?(key) && supported[key][supportable.id]
+  end
+  
+  def restrict_browser
+    unless valid_browser?
+      render :template => 'home/no_ie6.html.erb', :layout => false
+      return false
+    end
+  end
+  
+  private
+  
+  def store_vote_in_cookie(vote)
+    supportable = vote.supportable
+    supported   = cookies[:supportable].inspect != "nil" ? Marshal.load(cookies[:supportable]) : {}
+    
+    supportable_class = supportable.class.to_s.to_sym
+        
+    if supported[supportable_class].is_a?(Hash)
+      supported[supportable_class][supportable.id] = vote.id
+    else
+      supported[supportable_class] = { supportable.id => vote.id }
+    end
+    
+    cookies[:supportable] = { 
+      :value => Marshal.dump(supported), 
+      :expires => 4.years.from_now
+    }
+  end
+  
+  # Sets the profile in a cookie and returns the profile
+  def set_profile_cookie(profile)
+    cookies[:profile] = { 
+      :value => Marshal.dump(profile), 
+      :expires => 4.years.from_now
+    }
+    
+    profile
+  end
 end

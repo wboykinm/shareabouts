@@ -4,21 +4,30 @@
 en:
   app_name: OpenLunch!
   map_controls:
-    locate_feature: 'Add your lunch spot'
-    finalize_feature: 'Confirm location'
+    locate_feature: 'Add a location!'
+    finalize_feature: 'Confirm Location'
+    drag_hint: 'Drag me\! Then click confirm.'
+    drag_hint_long: 'Drag your location to the center of the map'
   auth:
     fb_signin: 'Sign in with Facebook'
+    twitter_signin: 'Sign in with Twitter'
+    sign_in: 'sign in with'
+  account:
+    my_points: 'My Points'
+    my_supports: 'Supported'
   feature:
     notice:
-      point_added: 'Thank you! Your spot was added to the map.'
-      invalid: 'There are some errors with your spot.'
+      point_added: 'Thank you! Your point was added to the map. Please, share it with your friends.'
+      invalid: 'There are some errors with your point.'
+      out_of_bounds: "Point doesn't fall within the defined regions"
     form:
-      header: "What's so great about this spot?"
-      title_label: Spot Name
-      description_label: This place is awesome because...
+      header: 'Tell us more...'
+      title_label: Location Name
+      description_label: Description...
       submitter_name_label: 'Your Name'
-      submit: 'Add it!'
-    submitted_by: 'Added by %{author} on %{date_s}'
+      submit: 'Submit Location'
+    submitted_by: 'added this point %{in_region}'
+    when: 'on %{date} at %{time}'
     comment: 
       label: comment
       action: Discuss
@@ -52,3 +61,5 @@ en:
   time:
     formats:
       display: "%-m/%-d/%Y"
+      date_long: "%B %-d, %Y"
+      just_time: "%l:%M %p"

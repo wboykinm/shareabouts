@@ -1,16 +1,36 @@
 class VotesController < ApplicationController
   
-  before_filter :get_supportable, :only => :create
+  before_filter :get_supportable
+  before_filter :find_or_create_profile, :only => :create
   
   def create
-    @vote = @supportable.votes.create :user => current_user
+    @vote = @supportable.votes.create :profile => @profile
     
-    store_vote_in_cookie_for @vote.supportable
+    store_vote_in_cookie @vote
     
     respond_to do |format|
       format.json { 
         render :json => {
-          :vote => @vote.as_json, 
+          :view => render_to_string(:partial => "#{supportable_class.tableize}/show.html", :locals => { supportable_class.underscore.to_sym => @supportable }) 
+        }
+      }
+    end
+  end
+  
+  def destroy
+    if current_user
+      @vote = current_user.votes.find params[:id]
+    else
+      @vote = Vote.where(:id => params[:id], :user_id => nil).first
+      raise ActiveRecord::RecordNotFound unless supported?(@vote.supportable)
+    end
+        
+    delete_vote_cookie @vote
+    @vote.destroy
+
+    respond_to do |format|
+      format.json { 
+        render :json => {
           :view => render_to_string(:partial => "#{supportable_class.tableize}/show.html", :locals => { supportable_class.underscore.to_sym => @supportable }) 
         }
       }
@@ -29,20 +49,21 @@ class VotesController < ApplicationController
     @supportable.class.to_s
   end
   
-  def store_vote_in_cookie_for(supportable)    
-    supported = cookies[:supportable].inspect != "nil" ? Marshal.load(cookies[:supportable]) : {}
+  def delete_vote_cookie(vote)
+    return if cookies[:supportable].inspect == "nil"
+    
+    supportable = vote.supportable
+    supported   = Marshal.load cookies[:supportable]
     
     supportable_class = supportable.class.to_s.to_sym
         
-    if supported.key?(supportable_class)
-      supported[supportable_class] << supportable.id
-    else
-      supported[supportable_class] = [supportable.id]
+    if supported[supportable_class].is_a?(Hash)
+      supported[supportable_class].delete(supportable.id)
+      
+      cookies[:supportable] = { 
+        :value => Marshal.dump(supported), 
+        :expires => 4.years.from_now
+      }
     end
-    
-    cookies[:supportable] = { 
-      :value => Marshal.dump(supported), 
-      :expires => 4.years.from_now
-    }
   end
 end

@@ -1,21 +1,24 @@
 require 'spec_helper'
 
 describe FeaturePoint do
+  it { should have_many(:votes)}
+  it { should have_many(:comments)}
+  it { should have_many(:feature_regions)}
+  it { should have_many(:regions)}
+  it { should have_many(:activity_items)}
+  it { should have_many(:children_activity_items)}
+  
+  it { should have_one(:feature_location_type)}
+  it { should have_one(:location_type)}
+  it { should have_one(:marker)}
+  
+  it { should belong_to(:profile)}
+  
+  
+  it { should validate_presence_of(:the_geom) }
   
   describe "validations" do
-    describe "the_geom" do
-      context "when absent" do
-        attr_reader :point
-        
-        before do
-          @point = new_feature_point :the_geom => nil, :nil_the_geom => true
-        end
-        
-        it "is invalid" do
-          point.should_not be_valid
-        end
-      end
-      
+    describe "the_geom" do      
       context "when outside of any regions" do
         attr_reader :point
         
@@ -32,63 +35,19 @@ describe FeaturePoint do
           point.errors[:the_geom].should include("Point doesn't fall within the defined regions")
         end
       end
-    end
-  end
-  
-  describe "associations" do
-    attr_reader :point
-    
-    before do
-      @point = create_feature_point
-    end
-    
-    context "user" do
-      attr_reader :user
       
-      before do
-        @user = create_user
-        @point.update_attribute :user_id, user.id
-      end
-      
-      it "belongs_to" do
-        point.user.should == user
-      end
-    end
-    
-    context "votes" do
-      attr_reader :vote
-      
-      before do
-        @vote = create_vote :supportable => point
-      end
-      
-      it "has_many" do
-        point.votes.should include(vote)
-      end
-    end
-    
-    context "comments" do
-      attr_reader :comment
-      
-      before do
-        @comment = create_comment :commentable => point
-      end
-      
-      it "has_many" do
-        point.comments.should include(comment)
-      end
-    end
-    
-    context "location_type" do
-      attr_reader :location_type
-      
-      before do
-        @location_type = create_location_type
-        create_feature_location_type :location_type => location_type, :feature => point
-      end
-      
-      it "has_many" do
-        point.location_type.should == location_type
+      context "when there are no regions" do
+        attr_reader :a_point
+        before do
+          @a_point = create_feature_point
+          Region.destroy_all
+          Region.count.should == 0
+        end
+        
+        it "is valid" do
+          point = new_feature_point :the_geom => a_point.the_geom, :nil_the_geom => true # ensures we don't create regions
+          point.should be_valid
+        end
       end
     end
   end
@@ -101,9 +60,35 @@ describe FeaturePoint do
       @point = create_feature_point
     end
     
+    describe "as json" do
+      context "with a location type" do
+        attr_reader :location_type
+        before do
+          @location_type = create_location_type
+          point.location_type = location_type
+          point.save
+        end
+        
+        context "without a marker" do
+          it "does not include location_type in json" do
+            point.as_json.has_key?(:location_type).should_not be
+          end
+        end
+        
+        context "with a marker" do
+          before do
+            create_marker :location_type => location_type
+          end
+          it "includes location_type in json" do
+            point.as_json.has_key?(:location_type).should be
+          end
+        end
+      end
+    end
+    
     context "without supports" do
       before do
-        point.votes.should_not be_present
+        point.votes.destroy_all
       end
       
       it "has a support_count of 0" do
@@ -111,14 +96,11 @@ describe FeaturePoint do
       end
     end
     
-    context "with supports" do
-      before do
-        create_vote :supportable => point
-        point.votes.should be_present
-      end
-      
-      it "has a support_count of 1" do
-        point.support_count.should == 1
+    context "with supports" do      
+      it "vote_count increases" do
+        lambda {
+          create_vote :supportable => point
+        }.should change(point, :support_count).by(1)
       end
     end
     
@@ -165,11 +147,12 @@ describe FeaturePoint do
       attr_reader :user
       
       before do
-        point.user = (@user = create_user)
+        @user = create_profile.user
+        point.profile = user.profile
       end
       
       it "displays submitter display name" do
-        point.display_submitter.should == point.user.name
+        point.display_submitter.should == point.profile.name
       end
     end
     
@@ -204,7 +187,7 @@ describe FeaturePoint do
     context "after being set to invisible" do
       before do
         point.activity_items.should be_present
-        create_vote :supportable => point
+        create_vote :supportable => point, :profile => create_profile
         point.reload.children_activity_items.should be_present
         
         point.update_attribute :visible, false          
@@ -222,6 +205,48 @@ describe FeaturePoint do
       it "is visible" do
         feature_point = FeaturePoint.new
         feature_point.should be_visible
+      end
+    end
+  end
+  
+  describe "after_create" do
+    context "when there is an associated user" do
+      attr_reader :user, :feature_point
+      
+      before do
+        @user          = create_profile.user
+        @feature_point = new_feature_point :profile => user.profile
+      end
+      
+      it "creates a new support" do
+        lambda {
+          feature_point.save
+        }.should change(Vote, :count).by(1)
+      end
+      
+      it "associates new support with user" do
+        feature_point.save
+        Vote.last.user.should == user
+      end
+    end
+    
+    context "when there is an associated profile" do
+      attr_reader :profile, :feature_point
+      
+      before do
+        @profile       = create_profile :user => nil
+        @feature_point = new_feature_point :profile => profile
+      end
+      
+      it "creates a new support" do
+        lambda {
+          feature_point.save
+        }.should change(Vote, :count).by(1)
+      end
+      
+      it "associates new support with profile" do
+        feature_point.save
+        Vote.last.profile.should == profile
       end
     end
   end

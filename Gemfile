@@ -1,16 +1,21 @@
 source 'http://rubygems.org'
 
-gem 'rails', '3.1.3'
+gem 'rails', '3.1.4'
 gem 'capistrano'
 gem 'capistrano-ext'
 
 gem 'devise'
 gem 'cancan'
 gem "omniauth-facebook"
+gem "omniauth-twitter"
 gem "fgraph"
+gem "twitter"
 
 gem 'jquery-rails'
-gem 'no-ie6-rails'
+gem "useragent"
+
+gem 'exception_notification'
+gem 'tlsmail'
 
 gem 'pg'
 
@@ -25,7 +30,12 @@ gem 'ckeditor'
 
 gem 'workflow'
 gem "paperclip", "~> 2.0"
+gem "rmagick", "2.12.2"
 gem "rubyzip"
+
+gem 'json'
+
+gem 'rake', '>=0.9.2'
 
 group :assets do
   gem 'uglifier', '>= 1.0.3'
@@ -36,6 +46,7 @@ group :development, :test do
   gem "fixjour"
   gem "rspec-rails", ">= 2.2.0"
   gem 'cover_me', '>= 1.2.0'
+  gem 'shoulda-matchers'
 end
 
 group :production do

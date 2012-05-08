@@ -1,16 +1,14 @@
 class FeaturePointsController < ApplicationController
 
-  before_filter :ignore_feature_location_type_fields_if_empty, :only => :create
+  before_filter :ignore_feature_location_type_fields_if_empty, :find_or_create_profile, :only => :create  
   before_filter :set_cache_buster, :only => :show # for IE8
   
   def index
     respond_to do |format|
       format.html
       format.json do
-        @feature_points = params[:bounds].present? ? 
-          FeaturePoint.visible_within(params[:bounds].map {|p| p.split(",").map &:to_f }) : 
-          FeaturePoint.visible
-        render :json => geo_json_for( @feature_points )
+        @feature_points = FeaturePoint.visible.where [ "id > ?", params[:after].to_i ]
+        render :json => @feature_points.map(&:as_json)
       end
     end
   end
@@ -24,13 +22,15 @@ class FeaturePointsController < ApplicationController
   end
   
   def create
-    @feature_point = FeaturePoint.new params[:feature_point].merge({:the_geom => the_geom_from_params(params), :user_id => current_user.try(:id)})
+    @feature_point = FeaturePoint.new params[:feature_point].merge({:the_geom => the_geom_from_params(params), :profile => @profile})
     
     if @feature_point.save
+      find_and_store_vote @feature_point
+      
       respond_to do |format|
         format.json do
           flash[:notice] = I18n.t( "feature.notice.point_added")
-          render :json => { :geoJSON => @feature_point.as_geo_json, :status => "success" }
+          render :json => { :feature_point => @feature_point.as_json, :status => "success" }
         end
       end
     else
@@ -86,6 +86,11 @@ class FeaturePointsController < ApplicationController
   end
   
   private
+  
+  def find_and_store_vote(feature_point)
+    vote = @profile.votes.where(:supportable_id => feature_point.id, :supportable_type => feature_point.class.to_s).first
+    store_vote_in_cookie vote
+  end
   
   def the_geom_from_params(p)
     Point.from_x_y p[:longitude].to_f, p[:latitude].to_f, 4326

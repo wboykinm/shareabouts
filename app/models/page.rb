@@ -1,3 +1,6 @@
+# Pages are created by admins, and by default, are linked to in the header of 
+# the app. Pages are loaded in the map's InformationPanel.
+
 class Page < ActiveRecord::Base
   
   StatusOptions = %w{draft published}
@@ -14,6 +17,7 @@ class Page < ActiveRecord::Base
   validates :author_id, :presence => true
   validates :status, :presence => true, :inclusion => { :in => StatusOptions }
   
+  default_scope :order => 'menu_order ASC'
   scope :published, where(:status => "published")
   
   before_save :set_welcome_page_update_flag
@@ -31,7 +35,9 @@ class Page < ActiveRecord::Base
   private
   
   def populate_author
-    self.author = Admin.current_admin
+    if author.blank?
+      self.author = Admin.current_admin
+    end
   end
   
   def populate_slug

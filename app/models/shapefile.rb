@@ -1,27 +1,20 @@
+# Shapefile represents a collection of Regions. Admins can upload a Shapefile
+# (or, a zip file that contains, at the least, a .shx, .shp, and .dbf file) 
+# and then the shapefile is parsed for Regions. Shapefile parsing and region 
+# creation happens in lib/jobs/shapefile_job.rb. Shapefiles that contain a .prj
+# file are reprojected via ogr2ogr.
+
 class Shapefile < ActiveRecord::Base
-  
-  class ZipContentValidator < ActiveModel::Validator
-    def validate(record)
-      extensions = ShapefileJob.new(record.data.to_file.path).unzip.map { |z| File.extname z.to_s }
-      
-      complete = %w{.shx .shp .dbf}.all? do |ext|
-        extensions.include? ext
-      end
-      
-      record.errors[:data] << "Zip file must at least contain .shx, .shp, and .dbf files." unless complete
-    end
-  end
-  
   has_many :regions, :inverse_of => :shapefile, :dependent => :destroy
   
   has_attached_file :data # zip file
   
   validates :kind, :presence => true, :uniqueness => true
-  validates :name_field, :presence => true
+  validates :name_field, :presence => true  # which field of the shapefile contains feature names.
   
   validates_attachment_presence :data
   validates_attachment_content_type :data, :content_type => "application/zip", :if => :attachment_present?
-  validates_with ZipContentValidator, :if => :attachment_present?
+  validates_with ShapefileContentValidator, :if => :attachment_present?
   
   before_save  :set_default_update_flag
   after_create :enqueue_importer
@@ -44,6 +37,10 @@ class Shapefile < ActiveRecord::Base
     update_attribute :job_error, message
   end
   
+  def attachment
+    data
+  end
+  
   private
   
   def attachment_present?
@@ -53,9 +50,7 @@ class Shapefile < ActiveRecord::Base
   def enqueue_importer
     Delayed::Job.enqueue ShapefileJob.new(data.path, id)
   end
-  
-  private
-  
+    
   def set_default_update_flag
     @update_other_regions_default = true if changes[:default] && changes[:default].last
   end

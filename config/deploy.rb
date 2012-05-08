@@ -67,15 +67,10 @@ namespace :delayed_job do
   end
 end
 
-namespace :db do
+namespace :config do
   task :symlink, :except => { :no_release => true } do
-    run "ln -nfs #{shared_path}/config/database.yml #{release_path}/config/database.yml"
-  end
-end
-
-namespace :facebook do
-  task :symlink, :except => { :no_release => true } do
-    run "ln -nfs #{shared_path}/config/facebook.yml #{release_path}/config/facebook.yml"
+    run "ln -nfs #{shared_path}/config/*.* #{release_path}/config/"
+    run "if [ -d #{shared_path}/config/initializers ]; then ln -nfs #{shared_path}/config/initializers/*.rb #{release_path}/config/initializers/; fi"
   end
 end
 
@@ -85,8 +80,7 @@ namespace :assets do
   end
 end
 
-after "deploy:finalize_update", "db:symlink"
-after 'deploy:update_code', "facebook:symlink"
+after "deploy:finalize_update", "config:symlink"
 after 'deploy:update_code', "assets:precompile"
-after "deploy:update_code", "delayed_job:restart"
 after "deploy:update_code", "deploy:write_tag_file"
+after "deploy:restart", "delayed_job:restart"
