@@ -46,10 +46,15 @@ module ApplicationHelper
   end
   
   def avatar_for(user)
+    image_tag avatar_url(user)
+  end
+  
+  def avatar_url(user)
+    return unless user.present?
     if user.facebook_id.present?
-      image_tag "https://graph.facebook.com/#{user.facebook_id}/picture" 
+      "https://graph.facebook.com/#{user.facebook_id}/picture" 
     elsif user.twitter_id.present?
-      image_tag "https://api.twitter.com/1/users/profile_image?id=#{user.twitter_id}"
+      "https://api.twitter.com/1/users/profile_image?id=#{user.twitter_id}"
     end
   end
   
